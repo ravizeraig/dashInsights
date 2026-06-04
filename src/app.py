@@ -1,81 +1,42 @@
 import streamlit as st
-import plotly.express as px
-# Importando a função da nossa camada de dados isolada
+# IMPORTAÇÃO 1: Buscando a query que se conecta ao PostgreSQL do Docker
 from queries import buscar_vendas_gerais
+# IMPORTAÇÃO 2: Sua fábrica de blocos visuais em HTML
+from components.styles import criar_banner_faturamento
 
-# Configuração de Layout Executivo
-st.set_page_config(page_title="DashInsights | Inteligência", layout="wide")
+# 1. Configuração da Janela do Navegador
+st.set_page_config(
+    page_title="DashInsights | BI", 
+    layout="wide"  
+)
 
-# Customização visual dos Cards de Métricas
-st.markdown("""
-    <style>
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    </style>
-    """, unsafe_allow_html=True)
+# 2. Renderizando o Título Principal do Dashboard
+st.title("📊 DashInsights — Performance Comercial")
 
-st.title("📊 DashInsights - Painel Executivo de Vendas")
+# 3. Uma descrição sutil logo abaixo
+st.markdown("Análise estratégica de faturamento corporativo construída bloco a bloco.")
+
+# 4. Uma linha divisória para organizar o visual
 st.markdown("---")
 
-# Consumindo a camada de dados
-df = buscar_vendas_gerais()
+# =========================================================================
+# BLOCO 2 & 3: CONEXÃO COM O BANCO & BANNER DE FATURAMENTO REAL
+# =========================================================================
 
-if not df.empty:
-    # 1. Filtro Lateral baseado na coluna 'plano'
-    st.sidebar.header("Filtros")
-    planos_disponiveis = st.sidebar.multiselect(
-        "Filtrar por Plano", 
-        options=df['plano'].unique(), 
-        default=df['plano'].unique()
-    )
-    
-    # Aplicando o filtro no DataFrame
-    df_filtrado = df[df['plano'].isin(planos_disponiveis)]
-    
-    # 2. Cálculo dos KPIs com as colunas reais do banco
-    faturamento_total = df_filtrado['valor_pago'].sum()
-    total_alunos = len(df_filtrado)
-    nps_medio = df_filtrado['nota_nps'].mean()
-    
-    # Calculando a taxa de inadimplência baseada na coluna booleana 'inadimplente'
-    # Como 'True' equivale a 1 e 'False' a 0, a média nos dá a proporção de inadimplentes
-    taxa_inadimplencia = df_filtrado['inadimplente'].mean() * 100
-    
-    # 3. Exibição dos KPIs Principais (Cards)
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Faturamento Total", f"R$ {faturamento_total:,.2f}")
-    with col2:
-        st.metric("Alunos Ativos", f"{total_alunos}")
-    with col3:
-        st.metric("NPS Médio", f"{nps_medio:.1f}")
-    with col4:
-        st.metric("Inadimplência", f"{taxa_inadimplencia:.1f}%")
-        
-    st.markdown("---")
-    
-    # 4. Gráficos Visuais de Alta Performance
-    col_graph1, col_graph2 = st.columns(2)
-    
-    with col_graph1:
-        st.subheader("💰 Desempenho Financeiro por Plano")
-        df_grafico = df_filtrado.groupby('plano')['valor_pago'].sum().reset_index()
-        fig_barras = px.bar(df_grafico, x='plano', y='valor_pago', color='plano', 
-                             labels={'plano': 'Plano', 'valor_pago': 'Faturamento (R$)'},
-                             template="plotly_white")
-        st.plotly_chart(fig_barras, use_container_width=True)
-        
-    with col_graph2:
-        st.subheader("📈 Tendência de Ingressos de Alunos")
-        # Agrupando os dados por mês para ver a linha de crescimento
-        df_mensal = df_filtrado.set_index('data_venda').resample('ME').size().reset_index(name='quantidade_vendas')
-        fig_linha = px.line(df_mensal, x='data_venda', y='quantidade_vendas', markers=True,
-                             labels={'data_venda': 'Mês', 'quantidade_vendas': 'Novos Alunos'},
-                             template="plotly_white")
-        st.plotly_chart(fig_linha, use_container_width=True)
+# Buscamos os dados brutos através do arquivo queries.py
+df_bruto = buscar_vendas_gerais()
 
-    # 5. Tabela de Dados Detalhada (Opcional/Expansível)
-    with st.expander("Ver Detalhamento dos Registros de Alunos"):
-        st.dataframe(df_filtrado.sort_values(by='data_venda', ascending=False), use_container_width=True)
+# Se o banco retornar os dados com sucesso (tabela não estiver vazia):
+if not df_bruto.empty:
+    
+    # Calculamos o faturamento real somando a coluna 'valor_pago' via Pandas
+    faturamento_real = df_bruto['valor_pago'].sum()
+
+    # Chamamos a função passando o dado 100% dinâmico do banco
+    criar_banner_faturamento(faturamento_real)
 
 else:
-    st.error("Falha ao carregar a camada de dados do projeto.")
+    # Caso o contêiner do Docker esteja desligado ou sem dados
+    st.error("Erro Crítico: A busca no banco retornou um DataFrame vazio.")
+
+st.markdown("---")
