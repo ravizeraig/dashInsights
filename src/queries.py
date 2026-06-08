@@ -2,10 +2,36 @@ import pandas as pd
 from database import conectar_banco
 
 def buscar_vendas_gerais():
-    """Busca todas as vendas do banco e formata as colunas necessárias."""
+    """
+    Busca todas as vendas do banco trazendo os dados dos alunos e planos 
+    através de JOINs e formata as colunas necessárias para o dashboard.
+    """
     try:
         conn = conectar_banco()
-        query = "SELECT * FROM vendas_cursos;"
+        
+        # 🔥 SQL JOIN: Juntamos as tabelas relacionais usando as Foreign Keys
+        query = """
+            SELECT 
+                v.id_venda,
+                a.nome_aluno,
+                a.email,
+                a.idade,
+                a.genero,
+                a.estado,
+                p.nome_plano AS plano,
+                v.valor_pago,
+                v.forma_pagamento,
+                v.quantidade_parcelas,
+                v.canal_aquisicao,
+                v.status_curso,
+                v.nota_nps,
+                v.inadimplente,
+                v.data_venda
+            FROM vendas_cursos v
+            INNER JOIN alunos a ON v.id_aluno = a.id_aluno
+            INNER JOIN planos p ON v.id_plano = p.id_plano;
+        """
+        
         df = pd.read_sql_query(query, conn)
         conn.close()
         
@@ -16,4 +42,21 @@ def buscar_vendas_gerais():
         return df
     except Exception as e:
         print(f"Erro na camada de dados (queries.py): {e}")
+        return pd.DataFrame()
+
+
+# 🔥 NOVA FUNÇÃO ACRESCENTADA NO FINAL DO ARQUIVO
+def buscar_custos_operacionais():
+    """
+    Busca todos os lançamentos de custos operacionais (OpEx) do banco
+    para cálculo do lucro real corporativo.
+    """
+    try:
+        conn = conectar_banco()
+        query = "SELECT * FROM custo_operacional;"
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+        return df
+    except Exception as e:
+        print(f"Erro ao buscar custos operacionais (queries.py): {e}")
         return pd.DataFrame()
