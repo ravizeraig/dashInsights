@@ -45,7 +45,6 @@ def buscar_vendas_gerais():
         return pd.DataFrame()
 
 
-# 🔥 NOVA FUNÇÃO ACRESCENTADA NO FINAL DO ARQUIVO
 def buscar_custos_operacionais():
     """
     Busca todos os lançamentos de custos operacionais (OpEx) do banco
@@ -59,4 +58,21 @@ def buscar_custos_operacionais():
         return df
     except Exception as e:
         print(f"Erro ao buscar custos operacionais (queries.py): {e}")
+        return pd.DataFrame()
+
+
+# 🔥 NOVA FUNÇÃO ADICIONADA PARA CONECTAR A 5ª TABELA DE MARKETING
+def buscar_custos_marketing_canal():
+    """
+    Busca os investimentos de tráfego pago por canal (CAC) do banco
+    para distribuição na matriz de dispersão e cálculo de eficiência financeira.
+    """
+    try:
+        conn = conectar_banco()
+        query = "SELECT * FROM custo_marketing_canal;"
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+        return df
+    except Exception as e:
+        print(f"Erro ao buscar custos de marketing por canal (queries.py): {e}")
         return pd.DataFrame()

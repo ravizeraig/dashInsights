@@ -1,32 +1,57 @@
-import psycopg2
-from psycopg2 import OperationalError
-
 import os
 import psycopg2
 from psycopg2 import OperationalError
 from dotenv import load_dotenv
 
-# Carrega as variáveis do arquivo .env
-load_dotenv()
+def popular_banco(total_registros=1200):
+    print("🚩 [DEBUG 1] Entrei na função popular_banco!") # <-- ADICIONE ISSO
+    
+    conn = conectar_banco()
+    print("🚩 [DEBUG 2] Passou pelo conectar_banco!")   # <-- ADICIONE ISSO
+    
+    if not conn:
+        print("❌ Não foi possível conectar ao banco de dados.")
+        return
+    
+    cursor = conn.cursor()
+    print("🚩 [DEBUG 3] Cursor criado com sucesso!")      # <-- ADICIONE ISSO
+# 🔥 SISTEMA INTELIGENTE DE BUSCA DO .ENV
+# Garante a leitura correta independente do diretório de execução do terminal
+if not load_dotenv():  # Tenta carregar no diretório atual
+    # Tenta buscar um nível acima (raiz do projeto)
+    if not load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env')):
+        # Tenta buscar dentro da pasta de infraestrutura
+        load_dotenv(os.path.join(os.path.dirname(__file__), '..', 'infra', '.env'))
 
 def conectar_banco():
     try:
-        # Puxamos os dados direto do seu .env de forma protegida
+        # Carrega estritamente as variáveis validadas do seu .env alinhado
+        host = os.getenv("DB_HOST")
+        port = os.getenv("DB_PORT")
+        database = os.getenv("DB_NAME")
+        user = os.getenv("DB_USER")
+        password = os.getenv("DB_PASSWORD")
+        
+        # Faz a conexão limpa com timeout de segurança de 3 segundos
         conn = psycopg2.connect(
-            host=os.getenv("DB_HOST", "127.0.0.1"),
-            port=os.getenv("DB_PORT", "5433"),
-            database=os.getenv("DB_NAME", "postgres"),
-            user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("DB_PASSWORD") # Lê a senha 'admin_password_123' com segurança
+            host=host,
+            port=port,
+            database=database,
+            user=user,
+            password=password,
+            connect_timeout=3  # 🔥 Evita travamento silencioso se houver erro de rede
         )
         return conn
     except OperationalError as e:
-        print(f"❌ Erro ao conectar no PostgreSQL: {e}")
+        # 🔥 Diagnóstico Avançado: Mostra exatamente o que falhou no terminal
+        print("\n❌ [Erro Crítico de Conexão] Não foi possível alcançar o banco de dados!")
+        print(f"   • Dados lidos -> Host: {host} | Porta: {port} | Banco: {database} | Usuário: {user}")
+        print(f"   • Detalhes do erro do Postgres: {e}\n")
         return None
-    
+                
 def criar_tabela():
     """
-    Cria a arquitetura relacional do ecossistema de BI (4 tabelas integradas).
+    Cria a arquitetura relacional do ecossistema de BI (5 tabelas integradas e regionalizadas).
     """
     conn = conectar_banco()
     if not conn:
@@ -68,9 +93,19 @@ def criar_tabela():
                 valor_custo NUMERIC(10,2) NOT NULL
             );
         """)
+
+        # 4. TABELA ATUALIZADA: Custo de Marketing por Canal e Região (Foco Geográfico)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS custo_marketing_canal (
+                id_custo_canal SERIAL PRIMARY KEY,
+                mes_referencia VARCHAR(7) NOT NULL,    -- Formato 'YYYY-MM'
+                canal_aquisicao VARCHAR(50) NOT NULL,  -- 'Google Ads', 'Meta Ads', etc.
+                estado_foco VARCHAR(2) NOT NULL,       -- Identificador geográfico ('SP', 'SC')
+                valor_investido NUMERIC(10,2) NOT NULL -- Valor injetado na plataforma
+            );
+        """)
         
-        # 4. Tabela Principal de Vendas (Tabela Fato)
-        # Ela se conecta com alunos e planos através de chaves estrangeiras (FOREIGN KEY)
+        # 5. Tabela Principal de Vendas (Tabela Fato)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS vendas_cursos (
                 id_venda SERIAL PRIMARY KEY,
@@ -88,7 +123,7 @@ def criar_tabela():
         """)
         
         conn.commit()
-        print("✅ [Database] Todas as 4 tabelas de alta performance foram criadas com sucesso!")
+        print("✅ [Database] Todas as 5 tabelas de alta performance foram criadas com sucesso!")
         
     except Exception as e:
         conn.rollback()

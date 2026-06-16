@@ -1,4 +1,8 @@
-# Valores e Planos vigentes
+# =========================================================================
+# 1. VALORES, PRODUTOS E REGRAS DEMOGRÁFICAS B2B ENTERPRISE
+# =========================================================================
+
+# Valores e Planos vigentes corporativos
 PLANOS = {
     'Bronze': 20000.00,
     'Prata': 45000.00,
@@ -6,14 +10,15 @@ PLANOS = {
     'Diamante': 100000.00
 }
 
-# Dados demográficos e geográficos
+# Dados demográficos e geográficos para segmentação do Data Lake
 ESTADOS = ['SP', 'RJ', 'MG', 'SC', 'PR', 'RS', 'BA', 'PE', 'DF', 'GO', 'AM', 'CE']
 GENEROS = ['Masculino', 'Feminino']
 
-# Regras de Vendas e CRM
+# Regras de Vendas e CRM (🔥 ALINHADOS CIRURGICAMENTE COM O GERADOR DE DADOS)
 FORMAS_PAGAMENTO = ['À Vista', 'Parcelado Boleto', 'Parcelado Cartão']
-CANAIS_AQUISICAO = ['Instagram Ads', 'Google Ads', 'LinkedIn Vagas', 'Indicação', 'Tráfego Orgânico']
+CANAIS_AQUISICAO = ['Google Ads', 'Meta Ads', 'YouTube', 'E-mail Marketing', 'Orgânico', 'Indicação']
 STATUS_CURSO = ['Não Iniciado', 'Em Andamento', 'Concluido', 'Cancelado']
+
 
 # =========================================================================
 # 2. REGRAS FINANCEIRAS DE OPEX REALISTAS (OPERAÇÃO ENTERPRISE)
@@ -45,14 +50,16 @@ INFRAESTRUTURA_MENSAL = {
 # O motor real do Inside Sales de alta performance
 BONUS_METAS_MES = 120000.00
 
-# CAC B2B Enterprise (Aumentado para refletir o custo de fechar com grandes marcas)
+# CAC B2B Enterprise (🔥 CHAVES ESPELHADAS COM O PROVEDOR DE MARKETING DO POSTGRES)
 CAC_POR_CANAL = {
-    'Instagram Ads': 2800.00,
     'Google Ads': 3500.00,
-    'LinkedIn Vagas': 5500.00,     # O canal mais caro e assertivo para grandes contas
-    'Indicação': 500.00,
-    'Tráfego Orgânico': 0.00
+    'Meta Ads': 2800.00,
+    'YouTube': 3000.00,
+    'E-mail Marketing': 800.00,
+    'Orgânico': 0.00,
+    'Indicação': 500.00
 }
+
 
 # =========================================================================
 # 3. ALÍQUOTAS FISCAIS E TAXAS DE OPERAÇÃO (DEDUÇÕES DA DRE)

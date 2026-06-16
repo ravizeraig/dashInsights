@@ -4,9 +4,10 @@ from faker import Faker
 from database import conectar_banco, criar_tabela
 import config_regras as regras
 
+# Inicializa o gerador oficial em português brasileiro
 fake = Faker('pt_BR')
 
-def popular_banco(total_registros=1200):
+def popular_banco(total_registros=800):
     conn = conectar_banco()
     if not conn:
         print("❌ Não foi possível conectar ao banco de dados.")
@@ -15,10 +16,13 @@ def popular_banco(total_registros=1200):
     cursor = conn.cursor()
     
     # -------------------------------------------------------------------------
-    # PASSAGEM DO RODO: Limpa todas as tabelas na ordem correta devido às Foreign Keys
+    # PASSAGEM DO RODO: Limpa dados antigos mantendo a integridade referencial
     # -------------------------------------------------------------------------
-    print("🧹 [Engine] Limpando dados antigos das tabelas relacionais...")
-    cursor.execute("TRUNCATE TABLE vendas_cursos, alunos, planos, custo_operacional RESTART IDENTITY CASCADE;")
+    print("🧹 [Engine] Limpando dados antigos das 5 tabelas relacionais...")
+    cursor.execute("""
+        TRUNCATE TABLE vendas_cursos, alunos, planos, custo_operacional, custo_marketing_canal 
+        RESTART IDENTITY CASCADE;
+    """)
     
     # -------------------------------------------------------------------------
     # STEP 1: Popular a tabela de PLANOS e capturar os IDs gerados
@@ -33,11 +37,9 @@ def popular_banco(total_registros=1200):
         id_planos_mapeados[nome_plano] = cursor.fetchone()[0]
 
     # -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-    # STEP 2: Popular a tabela de CUSTO OPERACIONAL (OpEx) dos últimos 12 meses
+    # STEP 2: Popular a tabela de CUSTO OPERACIONAL (OpEx) e MARKETING por REGIÃO
     # -------------------------------------------------------------------------
-    print("📉 [Engine] Lançando folha de pagamento e custos de infraestrutura retroativos...")
-    # Vamos gerar custos para os meses de 2025 e 2026 para cobrir o período das vendas
+    print("📉 [Engine] Lançando folha de pagamento, infraestrutura e marketing retroativos...")
     meses_gerar = [f"2025-{m:02d}" for m in range(1, 13)] + [f"2026-{m:02d}" for m in range(1, 7)]
     
     for mes in meses_gerar:
@@ -60,50 +62,71 @@ def popular_banco(total_registros=1200):
             INSERT INTO custo_operacional (mes_referencia, categoria, descricao, valor_custo)
             VALUES (%s, 'Comercial', 'Bônus de Metas do Time', %s);
         """, (mes, regras.BONUS_METAS_MES))
-# -------------------------------------------------------------------------
+
+        # Injetando investimentos com foco regionalizado (estado_foco)
+        pesos_investimento = {
+            'Google Ads': 15000.00,
+            'Meta Ads': 12000.00,
+            'YouTube': 8000.00,
+            'E-mail Marketing': 1500.00,
+            'Orgânico': 0.00,
+            'Indicação': 0.00
+        }
+        
+        for canal, valor_base in pesos_investimento.items():
+            estado_campanha = random.choice(regras.ESTADOS) if valor_base > 0 else 'BR'
+            variacao = random.uniform(0.85, 1.15) if valor_base > 0 else 1.0
+            valor_final = round(valor_base * variacao, 2)
+            
+            cursor.execute("""
+                INSERT INTO custo_marketing_canal (mes_referencia, canal_aquisicao, estado_foco, valor_investido)
+                VALUES (%s, %s, %s, %s);
+            """, (mes, canal, estado_campanha, valor_final))
+
+    # -------------------------------------------------------------------------
     # STEP 3: Loop Principal - Gerar Alunos e suas respectivas Vendas (Tabela Fato)
     # -------------------------------------------------------------------------
     print(f"🚀 [Engine] Gerando {total_registros} contratos B2B cruzando chaves...")
     
-    for i in range(total_registros): # <- Mudamos de '_' para 'i' para usar o número como contador único
-        # 1. Cria os dados demográficos do Aluno
+    for i in range(total_registros):
         nome = fake.name()
         
-        # 🔥 SOLUÇÃO: Injetamos o número do loop 'i' antes do @ para garantir e-mails 100% únicos
-        email_base = fake.free_email() # Usar free_email evita alguns domínios repetidos do Faker
+        # Criação de e-mail limpo e incremental baseado no Faker
+        email_base = fake.free_email()
         email_usuario, dominio = email_base.split('@')
         email = f"{email_usuario}_{i}@{dominio}" 
         
         idade = random.randint(22, 55)
         genero = random.choice(regras.GENEROS) 
         estado = random.choice(regras.ESTADOS)        
-        # Insere o aluno e captura o ID gerado pelo SERIAL do Postgres
+
         cursor.execute("""
             INSERT INTO alunos (nome_aluno, email, idade, genero, estado)
             VALUES (%s, %s, %s, %s, %s) RETURNING id_aluno;
         """, (nome, email, idade, genero, estado))
         id_aluno_gerado = cursor.fetchone()[0]
         
-        # 2. Sorteia as regras da Venda Corporativa
         plano_nome = random.choice(list(regras.PLANOS.keys()))
         id_plano_relacionado = id_planos_mapeados[plano_nome]
-        valor_pago = regras.PLANOS[plano_nome]
+        valor_pago = rules_valor if (rules_valor := regras.PLANOS[plano_nome]) else 0.0
         
         forma_pagto = random.choice(regras.FORMAS_PAGAMENTO)
         canal = random.choice(regras.CANAIS_AQUISICAO)
         status = random.choice(regras.STATUS_CURSO)
         nps = random.randint(1, 10)
-        data_venda = fake.date_between(start_date='-1y', end_date='today')
         
-        # Regra de Parcelas
+        # Escopo temporal de 1 ano
+        ano = random.choice([2025, 2026])
+        mes_venda = random.randint(1, 12) if ano == 2025 else random.randint(1, 6)
+        dia = random.randint(1, 28)
+        data_venda = f"{ano}-{mes_venda:02d}-{dia:02d}"
+        
         parcelas = 1 if forma_pagto == 'À Vista' else random.randint(2, 12)
             
-        # Regra de inadimplência (Boleto corporativo tem risco de 30%)
         inadimplente = False
         if forma_pagto == 'Parcelado Boleto':
             inadimplente = random.choices([True, False], weights=[30, 70])[0]
         
-        # 3. Insere na Tabela Fato (vendas_cursos) usando os IDs de ligação
         cursor.execute("""
             INSERT INTO vendas_cursos (
                 id_aluno, id_plano, valor_pago, forma_pagamento, 
@@ -116,10 +139,8 @@ def popular_banco(total_registros=1200):
     conn.commit()
     cursor.close()
     conn.close()
-    print(f"✅ [Engine] Sucesso Absoluto! Ecossistema de BI relacional povoado.")
+    print(f"✅ [Engine] Sucesso Absoluto! Ecossistema de BI relacional povoado com {total_registros} registros via Faker.")
 
 if __name__ == "__main__":
-    # 1. Cria a nova arquitetura de tabelas se não existirem
     criar_tabela()
-    # 2. Executa a carga pesada relacional
     popular_banco()
