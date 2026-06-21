@@ -1,12 +1,28 @@
 import streamlit as st
+import pandas as pd
 
 def renderizar_central_de_filtros(df):
     """
     Desenha os componentes de filtro na barra lateral e 
-    retorna o DataFrame já filtrado em cascata.
+    retorna o DataFrame filtrado, incluindo um menu de seleção de anos comerciais.
     """
     st.sidebar.header("🎯 Central de Filtros")
     st.sidebar.markdown("Selecione os parâmetros para análise:")
+
+    # Certifica-se de que a coluna de data está no formato datetime
+    df['data_venda'] = pd.to_datetime(df['data_venda'])
+    df['Ano'] = df['data_venda'].dt.year.astype(str)
+
+    # =========================================================================
+    # 🔥 NOVO MENU: SELEÇÃO DE ANOS COMERCIAIS
+    # =========================================================================
+    anos_disponiveis = sorted(df['Ano'].unique(), reverse=True) # Ex: ['2026', '2025', '2024', '2023']
+    
+    anos_selecionados = st.sidebar.multiselect(
+        "📆 Anos em Análise:",
+        options=anos_disponiveis,
+        default=anos_disponiveis # Inicia mostrando TODOS os anos (3 anos e meio)
+    )
 
     # 1. Filtro de Plano
     planos = st.sidebar.multiselect(
@@ -22,14 +38,15 @@ def renderizar_central_de_filtros(df):
         default=list(df['canal_aquisicao'].unique())
     )
     
-    # 3. Filtro de Estado (UF) - Organizado em ordem alfabética
+    # 3. Filtro de Estado (UF) - Sincronizado
+    estados_unicos = sorted(df['estado'].unique())
     estados = st.sidebar.multiselect(
         "Estados (UF):", 
-        options=sorted(df['estado'].unique()), 
-        default=list(df['estado'].unique())
+        options=estados_unicos, 
+        default=estados_unicos
     )
 
-    # 4. Filtro de Gênero (Agora 100% limpo com Masculino/Feminino da origem!)
+    # 4. Filtro de Gênero
     generos = st.sidebar.multiselect(
         "Gênero:",
         options=df['genero'].unique(),
@@ -43,17 +60,18 @@ def renderizar_central_de_filtros(df):
         default=list(df['forma_pagamento'].unique())
     )
 
-    # 6. Filtro de Idade (Slider dinâmico pegando o mínimo e máximo real do banco)
+    # 6. Filtro de Idade
     idade_min, idade_max = int(df['idade'].min()), int(df['idade'].max())
     faixa_idade = st.sidebar.slider(
         "Faixa Etária (Idade):",
         min_value=idade_min,
         max_value=idade_max,
-        value=(idade_min, idade_max)  # Inicia com o intervalo total selecionado
+        value=(idade_min, idade_max)
     )
 
     # --- Aplicação da lógica de filtragem cruzada do Pandas ---
     df_filtrado = df[
+        (df['Ano'].isin(anos_selecionados)) & # 🔥 Aplica o novo menu de anos
         (df['plano'].isin(planos)) & 
         (df['canal_aquisicao'].isin(canais)) & 
         (df['estado'].isin(estados)) &

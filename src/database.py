@@ -3,18 +3,7 @@ import psycopg2
 from psycopg2 import OperationalError
 from dotenv import load_dotenv
 
-def popular_banco(total_registros=1200):
-    print("🚩 [DEBUG 1] Entrei na função popular_banco!") # <-- ADICIONE ISSO
-    
-    conn = conectar_banco()
-    print("🚩 [DEBUG 2] Passou pelo conectar_banco!")   # <-- ADICIONE ISSO
-    
-    if not conn:
-        print("❌ Não foi possível conectar ao banco de dados.")
-        return
-    
-    cursor = conn.cursor()
-    print("🚩 [DEBUG 3] Cursor criado com sucesso!")      # <-- ADICIONE ISSO
+
 # 🔥 SISTEMA INTELIGENTE DE BUSCA DO .ENV
 # Garante a leitura correta independente do diretório de execução do terminal
 if not load_dotenv():  # Tenta carregar no diretório atual

@@ -1,14 +1,11 @@
-version: '3.8'
-
 services:
-  postgres_db:
-    image: postgres:15-alpine
+  db:
+    image: postgres:15.18-alpine
     container_name: dash_postgres
-    restart: always
     environment:
-      POSTGRES_DB: dash_insights_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: admin_password_123
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5433:5432"
     volumes:

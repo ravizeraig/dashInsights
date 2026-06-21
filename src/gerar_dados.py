@@ -7,7 +7,7 @@ import config_regras as regras
 # Inicializa o gerador oficial em português brasileiro
 fake = Faker('pt_BR')
 
-def popular_banco(total_registros=800):
+def popular_banco(total_registros=2630):
     conn = conectar_banco()
     if not conn:
         print("❌ Não foi possível conectar ao banco de dados.")
@@ -40,7 +40,13 @@ def popular_banco(total_registros=800):
     # STEP 2: Popular a tabela de CUSTO OPERACIONAL (OpEx) e MARKETING por REGIÃO
     # -------------------------------------------------------------------------
     print("📉 [Engine] Lançando folha de pagamento, infraestrutura e marketing retroativos...")
-    meses_gerar = [f"2025-{m:02d}" for m in range(1, 13)] + [f"2026-{m:02d}" for m in range(1, 7)]
+    # 🔥 EVOLUÇÃO: Gera uma sequência contínua de 3 anos e meio (2023, 2024, 2025 e 2026)
+    meses_gerar = (
+        [f"2023-{m:02d}" for m in range(1, 13)] +  # Todo o ano de 2023
+        [f"2024-{m:02d}" for m in range(1, 13)] +  # Todo o ano de 2024
+        [f"2025-{m:02d}" for m in range(1, 13)] +  # Todo o ano de 2025
+        [f"2026-{m:02d}" for m in range(1, 7)]     # Primeiro semestre de 2026
+    )   
     
     for mes in meses_gerar:
         # Lançando a Folha de Pagamento fixa do mês
