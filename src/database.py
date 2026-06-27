@@ -2,42 +2,53 @@ import os
 import psycopg2
 from psycopg2 import OperationalError
 from dotenv import load_dotenv
+import streamlit as st  # 🔥 Adicionado para ler as secrets da nuvem
 
-
-# 🔥 SISTEMA INTELIGENTE DE BUSCA DO .ENV
-# Garante a leitura correta independente do diretório de execução do terminal
-if not load_dotenv():  # Tenta carregar no diretório atual
-    # Tenta buscar um nível acima (raiz do projeto)
+# 🔥 SISTEMA INTELIGENTE DE BUSCA DO .ENV (Para rodar local na sua máquina)
+if not load_dotenv():  
     if not load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env')):
-        # Tenta buscar dentro da pasta de infraestrutura
         load_dotenv(os.path.join(os.path.dirname(__file__), '..', 'infra', '.env'))
 
 def conectar_banco():
     try:
-        # Carrega estritamente as variáveis validadas do seu .env alinhado
-        host = os.getenv("DB_HOST")
-        port = os.getenv("DB_PORT")
-        database = os.getenv("DB_NAME")
-        user = os.getenv("DB_USER")
-        password = os.getenv("DB_PASSWORD")
+        # =========================================================================
+        # ☁️ MODO ATIVO NA NUVEM: Se detectar as Secrets do Streamlit Cloud
+        # =========================================================================
+        if hasattr(st, "secrets") and "DB_HOST" in st.secrets:
+            host = st.secrets["DB_HOST"]
+            port = st.secrets["DB_PORT"]
+            database = st.secrets["DB_NAME"]
+            user = st.secrets["DB_USER"]
+            password = st.secrets["DB_PASSWORD"]
         
-        # Faz a conexão limpa com timeout de segurança de 3 segundos
+        # =========================================================================
+        # 💻 MODO LOCAL: Fallback para ler o arquivo .env da sua máquina
+        # =========================================================================
+        else:
+            host = os.getenv("DB_HOST")
+            port = os.getenv("DB_PORT")
+            database = os.getenv("DB_NAME")
+            user = os.getenv("DB_USER")
+            password = os.getenv("DB_PASSWORD")
+        
+        # Faz a conexão limpa (funciona tanto para as variáveis locais quanto nuvem)
         conn = psycopg2.connect(
             host=host,
             port=port,
             database=database,
             user=user,
             password=password,
-            connect_timeout=3  # 🔥 Evita travamento silencioso se houver erro de rede
+            connect_timeout=3  
         )
         return conn
+        
     except OperationalError as e:
-        # 🔥 Diagnóstico Avançado: Mostra exatamente o que falhou no terminal
         print("\n❌ [Erro Crítico de Conexão] Não foi possível alcançar o banco de dados!")
         print(f"   • Dados lidos -> Host: {host} | Porta: {port} | Banco: {database} | Usuário: {user}")
         print(f"   • Detalhes do erro do Postgres: {e}\n")
         return None
-                
+
+# ... O RESTANTE DO SEU CÓDIGO (criar_tabela) CONTINUA IGUAL ABAIXO ...                
 def criar_tabela():
     """
     Cria a arquitetura relacional do ecossistema de BI (5 tabelas integradas e regionalizadas).
